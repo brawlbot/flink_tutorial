@@ -63,7 +63,7 @@ public class WordCount {
 
         } catch (SecurityException e) {  
             e.printStackTrace();  
-        } catch (IOException e) {  
+        } catch (IOException e) {
             e.printStackTrace();  
         } 
         // set parallelism
@@ -75,13 +75,13 @@ public class WordCount {
         
         logger.info(executionConfig.toString());
         DataStream<String> text;
-        Path input_filePath = new Path("input/wordcount.txt");
+        Path input_filePath = new Path("input");
         
         FileSource.FileSourceBuilder<String> builder =
             FileSource.forRecordStreamFormat(new TextLineInputFormat(), input_filePath);
         
-//        builder.monitorContinuously(Duration.ofMillis(1));
-        builder.monitorContinuously(Duration.ofSeconds(10));
+        builder.monitorContinuously(Duration.ofMillis(1));
+//         builder.monitorContinuously(Duration.ofSeconds(5));
         
         logger.info("builder.getClass().toString() = " + builder.getClass().toString());
 
@@ -106,17 +106,15 @@ public class WordCount {
                         .sum(1)
                         .name("counter");
 
-        // // create SQL
-        // DataStream<Tuple2<String, Integer>> counts =
-        //     env.sqlQuery("SELECT word, SUM(count) FROM table GROUP BY word");
 
         counts.sinkTo(
                 FileSink.<Tuple2<String, Integer>>forRowFormat(
                                 new Path("output"), new SimpleStringEncoder<>())
                         .withRollingPolicy(
                                 DefaultRollingPolicy.builder()
-                                        .withMaxPartSize(MemorySize.ofMebiBytes(10))
-                                        .withRolloverInterval(Duration.ofSeconds(10))
+                                // partition size
+                                        .withMaxPartSize(MemorySize.ofMebiBytes(1))
+                                        .withRolloverInterval(Duration.ofSeconds(1))
                                         .build())
                         .build())
             .name("file-sink");
@@ -131,6 +129,7 @@ public class WordCount {
     
     public static final class Tokenizer
 	        implements FlatMapFunction<String, Tuple2<String, Integer>> {
+	
 	    @Override
 	    public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
 	        // normalize and split the line
