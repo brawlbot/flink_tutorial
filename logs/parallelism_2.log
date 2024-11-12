@@ -1,0 +1,10 @@
+Nov 12, 2024 10:56:42 AM wordcount.WordCount main
+INFO: Start logging mode: STREAMING
+Nov 12, 2024 10:56:42 AM wordcount.WordCount main
+INFO: class org.apache.flink.api.common.ExecutionConfig
+Nov 12, 2024 10:56:42 AM wordcount.WordCount main
+INFO: ExecutionConfig{configuration={execution.attached=true, parallelism.default=2, execution.target=local, execution.runtime-mode=STREAMING}, serializerConfig=SerializerConfig{configuration={execution.attached=true, parallelism.default=2, execution.target=local, execution.runtime-mode=STREAMING}, registeredTypesWithKryoSerializers={}, registeredTypesWithKryoSerializerClasses={}, defaultKryoSerializers={}, defaultKryoSerializerClasses={}, registeredKryoTypes=[], registeredPojoTypes=[], registeredTypeFactories={}}, executionRetryDelay=10000, restartStrategyConfiguration=Cluster level default restart strategy}
+Nov 12, 2024 10:56:42 AM wordcount.WordCount main
+INFO: builder.getClass().toString() = class org.apache.flink.connector.file.src.FileSource$FileSourceBuilder
+Nov 12, 2024 10:56:42 AM wordcount.WordCount main
+INFO: Prepair exec

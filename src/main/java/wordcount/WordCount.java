@@ -54,7 +54,7 @@ public class WordCount {
         FileHandler fh;   
         try {  
   
-            fh = new FileHandler("logs/echo.log");  
+            fh = new FileHandler("logs/parallelism_2.log");  
             logger.addHandler(fh);
             SimpleFormatter formatter = new SimpleFormatter();  
             fh.setFormatter(formatter);  
@@ -66,7 +66,8 @@ public class WordCount {
         } catch (IOException e) {  
             e.printStackTrace();  
         } 
-                // .setProperty("partition.discovery.interval.ms", "10000");
+        // set parallelism
+        env.setParallelism(2);
         ExecutionConfig executionConfig = env.getConfig();
 
 
@@ -110,7 +111,7 @@ public class WordCount {
                                 new Path("output"), new SimpleStringEncoder<>())
                         .withRollingPolicy(
                                 DefaultRollingPolicy.builder()
-                                        .withMaxPartSize(MemorySize.ofMebiBytes(1))
+                                        .withMaxPartSize(MemorySize.ofMebiBytes(10))
                                         .withRolloverInterval(Duration.ofSeconds(10))
                                         .build())
                         .build())
@@ -123,7 +124,7 @@ public class WordCount {
         // logger.info("Done");
         
     }
-
+    
     public static final class Tokenizer
 	        implements FlatMapFunction<String, Tuple2<String, Integer>> {
 	
