@@ -120,7 +120,7 @@ public class WordCount {
         
         env.execute("WordCount");
         
-        logger.info("Done");
+        // logger.info("Done");
         
     }
 
