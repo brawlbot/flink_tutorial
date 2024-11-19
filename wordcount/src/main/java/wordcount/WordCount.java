@@ -17,7 +17,6 @@ import org.apache.flink.configuration.MemorySize;
 
 
 // connector
-import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -132,10 +131,16 @@ public class WordCount {
 	
 	    @Override
 	    public void flatMap(String value, Collector<Tuple2<String, Integer>> out) {
-	        // normalize and split the line
+	    	
+	    	
+	    	
+            if (value == "debug") {
+                System.out.println("Trigger default");
+            }
+            
             System.out.println(value);
 	        String[] tokens = value.toLowerCase().split("\\W+");
-	        
+
 	        // emit the pairs
 	        for (String token : tokens) {
 	            if (token.length() > 0) {
