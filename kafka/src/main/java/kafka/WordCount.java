@@ -25,9 +25,9 @@ public class WordCount {
 	final static String jobTitle = "WordCount";
 
 	public static void main(String[] args) throws Exception {
-//	    final String bootstrapServers = args.length > 0 ? args[0] : "10.237.96.122:9092";
+	    final String bootstrapServers = args.length > 0 ? args[0] : "10.237.96.122:9092";
 	    
-	    final String bootstrapServers = args.length > 0 ? args[0] : "localhost:9092";
+//	    final String bootstrapServers = args.length > 0 ? args[0] : "localhost:9092";
 
 		// Set up the streaming execution environment
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
