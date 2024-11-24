@@ -11,19 +11,40 @@ DROP TABLE IF EXISTS user_behavior;
 CREATE TABLE user_behavior (
     role_id BIGINT,
     behavior STRING,
-    -- ts TIMESTAMP(3),
-    -- proctime AS PROCTIME(),   -- generates processing-time attribute using computed column
-    -- WATERMARK FOR ts AS ts - INTERVAL '5' SECOND  -- defines watermark on ts column, marks ts as event-time attribute
+    ts FROM_UNIXTIME(unix_ts),
+    proctime AS PROCTIME(),   -- generates processing-time attribute using computed column
+    WATERMARK FOR ts AS ts - INTERVAL '5' SECOND  -- defines watermark on ts column, marks ts as event-time attribute
 ) WITH (
     'connector' = 'kafka',  -- using kafka connector
     'topic' = 'user_behavior',  -- kafka topic
-    'scan.startup.mode' = 'earliest-offset',  -- reading from the beginning
+    'scan.startup.mode' = 'latest-offset',  -- reading from the beginning
     'properties.bootstrap.servers' = '10.237.96.122:9092',  -- kafka broker address
     'format' = 'json'  -- the data format is json
 );
 
-select * from user_behavior;
+SELECT * FROM user_behavior;
 ```
+# Sql
+## Aggregate
+```sql
+SELECT 
+    role_id, 
+    COUNT(*) AS behavior_count
+FROM 
+    user_behavior
+GROUP BY 
+    role_id;
+
+
+EXPLAIN PLAN FOR SELECT role_id, count(*) from user_behavior group by role_id;
+
+
+EXPLAIN CHANGELOG_MODE FOR SELECT role_id, count(*) from user_behavior group by role_id;
+
+```
+## watermark
+
+
 
 # Test network
 
