@@ -13,6 +13,10 @@ import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 
+import org.apache.flink.api.common.functions.AggregateFunction;
+
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 /**
  * This is a re-write of the Apache Flink WordCount example using Kafka connectors.
  * Find the original example at 
@@ -36,7 +40,7 @@ public class WordCount {
 		    .setBootstrapServers(bootstrapServers)
 		    .setTopics(inputTopic)
 		    .setGroupId("my-group")
-		    .setStartingOffsets(OffsetsInitializer.earliest())
+		    .setStartingOffsets(OffsetsInitializer.latest())
 		    .setValueOnlyDeserializer(new SimpleStringSchema())
 		    .build();
 
@@ -52,17 +56,31 @@ public class WordCount {
 
 		DataStream<String> text = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
 		// Split up the lines in pairs (2-tuples) containing: (word,1)
-        DataStream<String> counts = text.flatMap(new Tokenizer())
+
+		
 		// Group by the tuple field "0" and sum up tuple field "1"
-		.keyBy(value -> value.f0)
-		.sum(1)
-		.flatMap(new Reducer());
 
-		// Add the sink to so results
-		// are written to the outputTopic
+//		DataStream<String> counts = text.flatMap(new Tokenizer())
+//		.keyBy(value -> value.f0)
+////		.window(TumblingEventTimeWindows.of(Time.seconds(1))) // Define a tumbling window if required
+//		.sum(1)
+//		.flatMap(new Reducer());
+        
+        
+//        DataStream<String> counts = text.flatMap(new Tokenizer())
+//	        .keyBy(value -> value.f0)
+//	        .window(TumblingEventTimeWindows.of(Time.seconds(1))) // Define a tumbling window if required
+//	        .aggregate(new WordCountAggregateFunction()) // Use the custom aggregate function
+//	        .flatMap(new Reducer());
+        
+        
+        DataStream<String> counts = text.flatMap(new Tokenizer())
+        	    .keyBy(value -> value.f0)
+//        	    .window(TumblingEventTimeWindows.of(Time.seconds(1)))
+        	    .reduce((value1, value2) -> new Tuple2<>(value1.f0, value1.f1 + 2*value2.f1))
+        	    .flatMap(new Reducer());
+       
         counts.sinkTo(sink);
-		// (1,2)
-
 		// Execute program
 		env.execute(jobTitle);
 	}
@@ -101,8 +119,33 @@ public class WordCount {
         public void flatMap(Tuple2<String, Integer> value, Collector<String> out) {
         	// Convert the pairs to a string
         	// for easy writing to Kafka Topic
-        	String count = value.f0 + " " + value.f1;
+        	String count = value.f0 + "====" + value.f1;
         	out.collect(count);
         }
     }
+    
+    
+    public static class WordCountAggregateFunction
+    implements AggregateFunction<Tuple2<String, Integer>, Integer, Tuple2<String, Integer>> {
+	
+		@Override
+		public Integer createAccumulator() {
+		    return 100; // Initial accumulator value
+		}
+		
+		@Override
+		public Integer add(Tuple2<String, Integer> value, Integer accumulator) {
+		    return 100* accumulator + 10 * value.f1; // Increment the count
+		}
+		
+		@Override
+		public Tuple2<String, Integer> getResult(Integer accumulator) {
+		    return new Tuple2<>("word", 2*accumulator); // Produce the result
+		}
+		
+		@Override
+		public Integer merge(Integer a, Integer b) {
+		    return a + b; // Combine accumulators
+		}
+	}
 }
