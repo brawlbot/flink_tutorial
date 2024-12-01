@@ -1,3 +1,35 @@
+# Flink sql setup
+## Download jars dependence
+In `pom.xml`, add dependencies for Elasticsearch and Kafka. For example, you can refer to the following file:
+    - [elastic_pom.xml](../jars/elastic_pom.xml)
+    - [kafka_pom.xml](../jars/kafka_pom.xml)
+
+```sh
+mvn dependency:copy-dependencies -DoutputDirectory=./elastic -f elastic_pom.xml
+mvn dependency:copy-dependencies -DoutputDirectory=./kafka -f kafka_pom.xml
+```
+## Run sql in local mode (Option 1)
+```sh
+docker-compose exec flink-sql-client /bin/bash
+
+./sql-client.sh \
+    -l /mnt/jars/elastic \
+    -l /mnt/jars/kafka
+```
+## Run sql in hadoop (Option 2)
+```sh
+export HADOOP_CLASSPATH=`hadoop classpath`
+cd ${HOME}/flink/flink-1.16.0
+
+./sql-client.sh \
+-l /mnt/jars/kafka \
+-l /mnt/jars/elastic
+-j /mnt/jars/kafka/flink-connector-kafka-1.16.0.jar
+    # -j ${HOME}/.m2/repository/org/apache/flink/flink-connector-kafka/1.16.0/flink-connector-kafka-1.16.0.jar \
+    # -j ${HOME}/.m2/repository/org/apache/kafka/kafka-clients/3.2.3/kafka-clients-3.2.3.jar \
+```
+
+
 # Create table
 ```sh
 SHOW TABLES;
@@ -9,7 +41,7 @@ DROP TABLE IF EXISTS user_behavior;
 CREATE TABLE user_behavior (
     user_id BIGINT,
     item_id BIGINT,
-    category_id BIGINT,
+    category_id STRING,
     behavior STRING,
     ts TIMESTAMP(3),
     proctime AS PROCTIME(),   -- generates processing-time attribute using computed column
@@ -44,13 +76,6 @@ EXPLAIN CHANGELOG_MODE FOR SELECT role_id, count(*) from user_behavior group by 
 
 ```
 
-# Test network
-
-```bash
-docker run -it --rm --network=host nicolaka/netshoot /bin/bash -c "telnet 10.237.96.122 9092"
-docker run -it --rm --network=host nicolaka/netshoot /bin/bash -c "telnet 127.0.0.1 9092"
-```
-
 
 ```sql
 DROP TABLE IF EXISTS buy_cnt_per_second;
@@ -67,7 +92,6 @@ CREATE TABLE buy_cnt_per_second (
     'format' = 'json'  -- the data format is json
 );
 
-
 INSERT INTO buy_cnt_per_second
 SELECT SECOND(TUMBLE_START(ts, INTERVAL '1' SECOND)), COUNT(*)
 FROM user_behavior
@@ -77,6 +101,9 @@ GROUP BY TUMBLE(ts, INTERVAL '1' SECOND);
 SELECT * FROM buy_cnt_per_second;
 -- SELECT CAST('2024-11-25 01:28:00' AS TIMESTAMP);
 ```
+
+
+
 
 
 ### Group by item
@@ -119,7 +146,6 @@ FROM user_behavior
 WHERE behavior = 'buy'
 GROUP BY TUMBLE(ts, INTERVAL '1' SECOND);
 
-
 select * from buy_cnt_per_second_elk;
 
 INSERT INTO buy_cnt_per_second_elk VALUES (1, 2);
@@ -157,7 +183,6 @@ CREATE TABLE user_behavior (
 );
 
 -- DROP TABLE IF EXISTS buy_cnt_per_second_elk;
-
 CREATE TABLE buy_cnt_per_second_elk (
     -- hour BIGINT,
     second_of_minue BIGINT,
@@ -167,8 +192,6 @@ CREATE TABLE buy_cnt_per_second_elk (
     'hosts' = '10.237.96.122:9200',  -- elasticsearch address
     'index' = 'buy_cnt_per_second_elk'  -- elasticsearch index name, similar to database table name
 );
-
-
 
 INSERT INTO buy_cnt_per_second_elk
 SELECT SECOND(TUMBLE_START(ts, INTERVAL '1' SECOND)), COUNT(*)
