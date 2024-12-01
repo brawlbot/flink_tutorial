@@ -57,9 +57,15 @@ CREATE TABLE user_behavior (
     'properties.bootstrap.servers' = '10.237.96.122:9092',  -- kafka broker address
     'format' = 'json'  -- the data format is json
 );
+```
 
+```sql
 SELECT * FROM user_behavior;
 ```
+Then the output will be:
+![cli_user_behavior](../image/cli_user_behavior.png)
+
+
 Explain tolerate 5-seconds out-of-order, ts field becomes an event-time attribute
 
 # Sql
@@ -105,6 +111,13 @@ SELECT * FROM buy_cnt_per_second;
 -- SELECT CAST('2024-11-25 01:28:00' AS TIMESTAMP);
 ```
 
+Query the data in kafka
+![cli_buy_cnt_per_second](../image/cli_buy_cnt_per_second.png)
+
+Or in Kafka Control Center
+![kafka_buy_cnt_per_second](../image/kafka_buy_cnt_per_second.png)
+
+
 ### Group by item
 ```sql
 DROP TABLE IF EXISTS buy_cnt_per_item;
@@ -127,28 +140,25 @@ CREATE TABLE buy_cnt_per_item (
 
 ### elastic search
 ```sql
-DROP TABLE IF EXISTS buy_cnt_per_second_elk;
+DROP TABLE IF EXISTS buy_cnt_per_second;
 
-CREATE TABLE buy_cnt_per_second_elk (
+CREATE TABLE buy_cnt_per_second (
     -- hour BIGINT,
     second_of_minue BIGINT,
     buy_cnt BIGINT
 ) WITH (
     'connector' = 'elasticsearch-7', -- using elasticsearch connector
     'hosts' = '10.237.96.122:9200',  -- elasticsearch address
-    'index' = 'buy_cnt_per_second_elk'  -- elasticsearch index name, similar to database table name
+    'index' = 'buy_cnt_per_second'  -- elasticsearch index name, similar to database table name
 );
 
-INSERT INTO buy_cnt_per_second_elk
+INSERT INTO buy_cnt_per_second
 SELECT SECOND(TUMBLE_START(ts, INTERVAL '1' SECOND)), COUNT(*)
 FROM user_behavior
 WHERE behavior = 'buy'
 GROUP BY TUMBLE(ts, INTERVAL '1' SECOND);
 
-select * from buy_cnt_per_second_elk;
-
-INSERT INTO buy_cnt_per_second_elk VALUES (1, 2);
-
+-- INSERT INTO buy_cnt_per_second_elk VALUES (1, 2);
 ```
 
 # Reference
@@ -156,40 +166,32 @@ INSERT INTO buy_cnt_per_second_elk VALUES (1, 2);
 document of function sql be found in [systemfunctions](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/dev/table/functions/systemfunctions/)
 
 
+# get cumulative uv
 
-# Elasticsearch
-
-flink-sql-connector-elasticsearch7_2.11
-
-
+each 10 minutes, get the cumulative uv
 ```sql
--- DROP TABLE IF EXISTS buy_cnt_per_second_elk;
-CREATE TABLE buy_cnt_per_second_elk (
-    -- hour BIGINT,
-    second_of_minue BIGINT,
-    buy_cnt BIGINT
-) WITH (
-    'connector' = 'elasticsearch-7', -- using elasticsearch connector
-    'hosts' = '10.237.96.122:9200',  -- elasticsearch address
-    'index' = 'buy_cnt_per_second_elk'  -- elasticsearch index name, similar to database table name
-);
+DROP TABLE IF EXISTS cumulative_uv_10sec;
 
-INSERT INTO buy_cnt_per_second_elk
-SELECT SECOND(TUMBLE_START(ts, INTERVAL '1' SECOND)), COUNT(*)
-FROM user_behavior
-WHERE behavior = 'buy'
-GROUP BY TUMBLE(ts, INTERVAL '1' SECOND);
-```
-
-```sql
-CREATE TABLE cumulative_uv (
+CREATE TABLE cumulative_uv_10sec (
     date_str STRING,
     time_str STRING,
     uv BIGINT,
     PRIMARY KEY (date_str, time_str) NOT ENFORCED
 ) WITH (
-    'connector' = 'elasticsearch-7',
-    'hosts' = 'http://elasticsearch:9200',
-    'index' = 'cumulative_uv'
+    'connector' = 'elasticsearch-7', -- using elasticsearch connector
+    'hosts' = '10.237.96.122:9200',  -- elasticsearch address
+    'index' = 'cumulative_uv_10sec'
 );
+
+
+INSERT INTO cumulative_uv_10sec
+SELECT date_str, MAX(time_str), COUNT(DISTINCT user_id) as uv
+FROM (
+  SELECT
+    DATE_FORMAT(ts, 'yyyy-MM-dd') as date_str,
+    SUBSTR(DATE_FORMAT(ts, 'HH:mm:ss'),1,6) || '0' as time_str,
+    user_id
+  FROM user_behavior)
+GROUP BY date_str;
 ```
+
