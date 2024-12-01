@@ -4,11 +4,13 @@ In `pom.xml`, add dependencies for Elasticsearch and Kafka. For example, you can
     - [elastic_pom.xml](../jars/elastic_pom.xml)
     - [kafka_pom.xml](../jars/kafka_pom.xml)
 
+To install jars to local folder `jars`, run the following command:
 ```sh
 mvn dependency:copy-dependencies -DoutputDirectory=./elastic -f elastic_pom.xml
 mvn dependency:copy-dependencies -DoutputDirectory=./kafka -f kafka_pom.xml
 ```
 ## Run sql in local mode (Option 1)
+In docker container, run the following command:
 ```sh
 docker-compose exec flink-sql-client /bin/bash
 
@@ -17,16 +19,17 @@ docker-compose exec flink-sql-client /bin/bash
     -l /mnt/jars/kafka
 ```
 ## Run sql in hadoop (Option 2)
+In docker container, run the following command:
+
 ```sh
 export HADOOP_CLASSPATH=`hadoop classpath`
+
 cd ${HOME}/flink/flink-1.16.0
 
-./sql-client.sh \
--l /mnt/jars/kafka \
--l /mnt/jars/elastic
--j /mnt/jars/kafka/flink-connector-kafka-1.16.0.jar
-    # -j ${HOME}/.m2/repository/org/apache/flink/flink-connector-kafka/1.16.0/flink-connector-kafka-1.16.0.jar \
-    # -j ${HOME}/.m2/repository/org/apache/kafka/kafka-clients/3.2.3/kafka-clients-3.2.3.jar \
+./bin/sql-client.sh \
+    -j ${HOME}/.m2/repository/org/apache/flink/flink-connector-kafka/1.16.0/flink-connector-kafka-1.16.0.jar \
+    -j ${HOME}/.m2/repository/org/apache/kafka/kafka-clients/3.2.3/kafka-clients-3.2.3.jar \
+    -l ${HOME}/jars/elasticsearch
 ```
 
 
@@ -102,10 +105,6 @@ SELECT * FROM buy_cnt_per_second;
 -- SELECT CAST('2024-11-25 01:28:00' AS TIMESTAMP);
 ```
 
-
-
-
-
 ### Group by item
 ```sql
 DROP TABLE IF EXISTS buy_cnt_per_item;
@@ -164,24 +163,6 @@ flink-sql-connector-elasticsearch7_2.11
 
 
 ```sql
-
-CREATE TABLE user_behavior (
-    user_id BIGINT,
-    item_id BIGINT,
-    category_id BIGINT,
-    behavior STRING,
-    ts TIMESTAMP(3),
-    proctime AS PROCTIME(),   -- generates processing-time attribute using computed column
-    WATERMARK FOR ts AS ts - INTERVAL '5' SECOND  -- defines watermark on ts column, marks ts as event-time attribute
-
-) WITH (
-    'connector' = 'kafka',  -- using kafka connector
-    'topic' = 'user_behavior',  -- kafka topic
-    'scan.startup.mode' = 'latest-offset',  -- reading from the beginning
-    'properties.bootstrap.servers' = '10.237.96.122:9092',  -- kafka broker address
-    'format' = 'json'  -- the data format is json
-);
-
 -- DROP TABLE IF EXISTS buy_cnt_per_second_elk;
 CREATE TABLE buy_cnt_per_second_elk (
     -- hour BIGINT,
@@ -198,6 +179,17 @@ SELECT SECOND(TUMBLE_START(ts, INTERVAL '1' SECOND)), COUNT(*)
 FROM user_behavior
 WHERE behavior = 'buy'
 GROUP BY TUMBLE(ts, INTERVAL '1' SECOND);
+```
 
-
-select * from  buy_cnt_per_second_elk;
+```sql
+CREATE TABLE cumulative_uv (
+    date_str STRING,
+    time_str STRING,
+    uv BIGINT,
+    PRIMARY KEY (date_str, time_str) NOT ENFORCED
+) WITH (
+    'connector' = 'elasticsearch-7',
+    'hosts' = 'http://elasticsearch:9200',
+    'index' = 'cumulative_uv'
+);
+```
