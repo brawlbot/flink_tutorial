@@ -1,13 +1,4 @@
-# Flink sql setup
-## gen data
-```sh
-docker exec -it flink-datagen-1 bash -c 'java -classpath /opt/datagen/flink-sql-demo.jar myflink.SourceGenerator --input /opt/datagen/user_behavior.log --output kafka kafka:9101 --speedup 2000'
-
-java -classpath /opt/datagen/flink-sql-demo.jar myflink.SourceGenerator --input /opt/datagen/user_behavior.log --output kafka kafka:9094 --speedup 2000
-
-java -classpath /opt/datagen/flink-sql-demo.jar myflink.SourceGenerator --input /opt/datagen/user_behavior.log --output kafka 10.237.96.122:9101 --speedup 2000
-```
-## Download jars dependence
+# Download jars dependence
 In `pom.xml`, add dependencies for Elasticsearch and Kafka. For example, you can refer to the following file:
     - [elastic_pom.xml](../jars/elastic_pom.xml)
     - [kafka_pom.xml](../jars/kafka_pom.xml)
@@ -125,9 +116,11 @@ SELECT * FROM buy_cnt_per_second;
 ```
 
 Query the data in kafka
+
 ![cli_buy_cnt_per_second](../image/cli_buy_cnt_per_second.png)
 
 Or in Kafka Control Center
+
 ![kafka_buy_cnt_per_second](../image/kafka_buy_cnt_per_second.png)
 
 
