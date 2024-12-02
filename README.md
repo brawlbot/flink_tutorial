@@ -76,7 +76,10 @@ summary of the steps
 1. run example
 2. savepoint
 
+
 # Flink SQL Client
+## Generate data
+to generate data for testing, refer to [sql/producer.ipynb](sql/producer.ipynb)
 
 Refer to [sql/sql_client.md](sql/sql_client.md)
 
