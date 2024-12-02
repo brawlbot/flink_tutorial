@@ -31,6 +31,14 @@ yarn logs -applicationId application_1733048524061_0002
 
 yarn application -list
 telnet node6.lab.internal 8088
-KRB5_CONFIG=krb5.conf kinit
+KRB5_CONFIG=krb5.conf kinit namvq
+
+scp lab@10.237.96.80:/tmp/krb5cc_1000 /tmp/krb5cc_1000
 ```
 yarn logs -applicationId 
+
+# Savepoint
+```sh
+/bin/flink savepoint $job_id hdfs:///user/namvq/flink-savepoints -yid $app_id
+```
+![alt text](image/savepoint.png)
