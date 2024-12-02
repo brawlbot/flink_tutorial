@@ -12,6 +12,7 @@ then list of service
 |Flink Dashboard| [http://10.237.96.122:9081/](http://10.237.96.122:9081/) | Note that it implement localhost |
 |Kibana| [http://10.237.96.122:5601/](http://10.237.96.122:5601/) | Tool to visualize elastic search data |
 |Elastic Search| [http://10.237.96.122:9200/](http://10.237.96.122:9200/) | Elastic search |
+|Yarn UI| [http://node8.lab.internal:8088/cluster/apps/RUNNING](http://node8.lab.internal:8088/cluster/apps/RUNNING) | Optional: Yarn UI |
 
 # wordcount
 
@@ -59,29 +60,28 @@ w8
 - `builder.monitorContinuously(Duration.ofSeconds(10));`
 
 
+# Notable Documentation
+- [Flink SQL](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/sql/)
 # kill all process contain `wordcount`
 ```bash
 kill $(ps aux | grep wordcount | grep -v grep | awk '{print $2}')
 ```
 
-# Flink in hadoop cluster
-```bash
-wget https://dlcdn.apache.org/flink/flink-2.0-preview1/flink-2.0-preview1-bin-scala_2.12.tgz
-```
+# Flink run to yarn 
 
 
+Refer to [yarn/setup.md](yarn/setup.md)
 
-# Docker
-```bash
-# stop and kill all docker containers
-docker stop $(docker ps -q)
-docker rm $(docker ps -a -q)
-# stop yarn session
-yarn application -kill application_1732004582070_0004
+summary of the steps
+1. run example
+2. savepoint
 
+# Flink SQL Client
 
+Refer to [sql/sql_client.md](sql/sql_client.md)
 
-
-rsync -avz kafka/target/classes/kafka/wc.jar lab@10.237.96.10:/home/lab/jars/
-```
-
+Summary of the steps
+1. Download jars dependence
+2. Run sql client in local mode or hadoop mode
+3. Run sql statement
+    - [top_category.sql](sql/top_category.sql)
