@@ -1,13 +1,22 @@
 # Flink sql setup
+## gen data
+```sh
+docker exec -it flink-datagen-1 bash -c 'java -classpath /opt/datagen/flink-sql-demo.jar myflink.SourceGenerator --input /opt/datagen/user_behavior.log --output kafka kafka:9101 --speedup 2000'
+
+java -classpath /opt/datagen/flink-sql-demo.jar myflink.SourceGenerator --input /opt/datagen/user_behavior.log --output kafka kafka:9094 --speedup 2000
+
+java -classpath /opt/datagen/flink-sql-demo.jar myflink.SourceGenerator --input /opt/datagen/user_behavior.log --output kafka 10.237.96.122:9101 --speedup 2000
+```
 ## Download jars dependence
 In `pom.xml`, add dependencies for Elasticsearch and Kafka. For example, you can refer to the following file:
     - [elastic_pom.xml](../jars/elastic_pom.xml)
     - [kafka_pom.xml](../jars/kafka_pom.xml)
-
+    - [jdbc_pom.xml](../jars/jdbc_pom.xml)
 To install jars to local folder `jars`, run the following command:
 ```sh
 mvn dependency:copy-dependencies -DoutputDirectory=./elastic -f elastic_pom.xml
 mvn dependency:copy-dependencies -DoutputDirectory=./kafka -f kafka_pom.xml
+mvn dependency:copy-dependencies -DoutputDirectory=./jdbc -f jdbc_pom.xml
 ```
 ## Run sql in local mode (Option 1)
 In docker container, run the following command:
@@ -16,7 +25,10 @@ docker-compose exec flink-sql-client /bin/bash
 
 ./sql-client.sh \
     -l /mnt/jars/elastic \
-    -l /mnt/jars/kafka
+    -l /mnt/jars/kafka \
+    -l /mnt/jars/jdbc
+
+export HADOOP_CLASSPATH=`hadoop classpath`
 ```
 ## Run sql in hadoop (Option 2)
 In docker container, run the following command:
@@ -24,12 +36,14 @@ In docker container, run the following command:
 ```sh
 export HADOOP_CLASSPATH=`hadoop classpath`
 
-cd ${HOME}/flink/flink-1.16.0
+cd ${HOME}/flink-1.16.0
 
 ./bin/sql-client.sh \
     -j ${HOME}/.m2/repository/org/apache/flink/flink-connector-kafka/1.16.0/flink-connector-kafka-1.16.0.jar \
     -j ${HOME}/.m2/repository/org/apache/kafka/kafka-clients/3.2.3/kafka-clients-3.2.3.jar \
-    -l ${HOME}/jars/elasticsearch
+    -l ${HOME}/jars/elasticsearch \
+    -l ${HOME}/jars/jdbc
+
 ```
 
 
@@ -82,7 +96,6 @@ GROUP BY
 
 EXPLAIN PLAN FOR SELECT role_id, count(*) from user_behavior group by role_id;
 EXPLAIN CHANGELOG_MODE FOR SELECT role_id, count(*) from user_behavior group by role_id;
-
 ```
 
 
@@ -139,10 +152,16 @@ CREATE TABLE buy_cnt_per_item (
 ```
 
 ### elastic search
-```sql
-DROP TABLE IF EXISTS buy_cnt_per_second;
 
-CREATE TABLE buy_cnt_per_second (
+Delete the index before creating the table
+```sh
+curl -X DELETE "http://10.237.96.122:9200/buy_cnt_per_second"
+```
+
+```sql
+DROP TABLE IF EXISTS buy_cnt_per_second_elk;
+
+CREATE TABLE buy_cnt_per_second_elk (
     -- hour BIGINT,
     second_of_minue BIGINT,
     buy_cnt BIGINT
@@ -152,7 +171,7 @@ CREATE TABLE buy_cnt_per_second (
     'index' = 'buy_cnt_per_second'  -- elasticsearch index name, similar to database table name
 );
 
-INSERT INTO buy_cnt_per_second
+INSERT INTO buy_cnt_per_second_elk
 SELECT SECOND(TUMBLE_START(ts, INTERVAL '1' SECOND)), COUNT(*)
 FROM user_behavior
 WHERE behavior = 'buy'
@@ -168,15 +187,19 @@ document of function sql be found in [systemfunctions](https://nightlies.apache.
 
 # get cumulative uv
 
-each 10 minutes, get the cumulative uv
+each 10 seconds, get the cumulative uv
+```sh
+curl -X DELETE "http://10.237.96.122:9200/cumulative_uv_10sec"
+```
+
 ```sql
 DROP TABLE IF EXISTS cumulative_uv_10sec;
 
 CREATE TABLE cumulative_uv_10sec (
     date_str STRING,
     time_str STRING,
-    uv BIGINT,
-    PRIMARY KEY (date_str, time_str) NOT ENFORCED
+    uv BIGINT
+    -- PRIMARY KEY (date_str, time_str) NOT ENFORCED
 ) WITH (
     'connector' = 'elasticsearch-7', -- using elasticsearch connector
     'hosts' = '10.237.96.122:9200',  -- elasticsearch address
@@ -189,9 +212,93 @@ SELECT date_str, MAX(time_str), COUNT(DISTINCT user_id) as uv
 FROM (
   SELECT
     DATE_FORMAT(ts, 'yyyy-MM-dd') as date_str,
-    SUBSTR(DATE_FORMAT(ts, 'HH:mm:ss'),1,6) || '0' as time_str,
+    CONCAT(SUBSTR(DATE_FORMAT(ts, 'HH:mm:ss'), 1, 7), '0') as time_str,
     user_id
-  FROM user_behavior)
+  FROM user_behavior
+)
+GROUP BY date_str;
+
+```
+
+output in Kibana
+![kibana_cumulative_uv_10sec](../image/kibana_cumulative_uv_10sec.png)
+
+# Get total unique user
+
+```sh
+curl -X DELETE "http://10.237.96.122:9200/total_uv_10sec"
+```
+
+```sql
+DROP TABLE IF EXISTS total_uv_10sec;
+
+CREATE TABLE total_uv_10sec (
+    date_str STRING,
+    time_str STRING,
+    uv BIGINT,
+    PRIMARY KEY (date_str, time_str) NOT ENFORCED
+) WITH (
+    'connector' = 'elasticsearch-7', -- using elasticsearch connector
+    'hosts' = '10.237.96.122:9200',  -- elasticsearch address
+    'index' = 'total_uv_10sec'
+);
+
+
+INSERT INTO total_uv_10sec
+SELECT date_str, MAX(time_str), COUNT(DISTINCT user_id) as uv
+FROM (
+  SELECT
+    DATE_FORMAT(ts, 'yyyy-MM-dd') as date_str,
+    CONCAT(SUBSTR(DATE_FORMAT(ts, 'HH:mm:ss'), 1, 7), '0') as time_str,
+    user_id
+  FROM user_behavior
+)
 GROUP BY date_str;
 ```
 
+output in Kibana
+![kibana_total_uv_10sec](../image/kibana_total_uv_10sec.png)
+
+
+# Top category
+
+connect to mysql 10.237.96.122:3306
+
+```sql
+DROP TABLE IF EXISTS category_dim;
+
+CREATE TABLE category_dim (
+    sub_category_id STRING,
+    parent_category_name STRING
+) WITH (
+    'connector' = 'jdbc',
+    'url' = 'jdbc:mysql://10.237.96.122:3306/flink',
+    'table-name' = 'category',
+    'username' = 'root',
+    'password' = '123456',
+    'lookup.cache.max-rows' = '5000',
+    'lookup.cache.ttl' = '10s'
+);
+
+SELECT * FROM category_dim;
+```
+
+
+```sql
+-- DROP TABLE IF EXISTS top_category;
+CREATE TABLE top_category (
+    category_name STRING PRIMARY KEY NOT ENFORCED,
+    buy_cnt BIGINT
+) WITH (
+    'connector' = 'elasticsearch-7',
+    'hosts' = '10.237.96.122:9200',
+    'index' = 'top_category'
+);
+```
+
+output in Kibana
+![kibana_top_category](../image/kibana_top_category.png)
+
+
+# Overview the dashboard
+![dashboard](../image/dashboard.png)
