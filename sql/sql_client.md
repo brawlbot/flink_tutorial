@@ -250,7 +250,7 @@ GROUP BY date_str;
 ```
 
 output in Kibana
-![kibana_total_uv_10sec](../image/kibana_total_uv_10sec.png)
+![kibana_total_uv_10sec](../image/kibana_cumulative_uv_10sec.png)
 
 
 # Top category
