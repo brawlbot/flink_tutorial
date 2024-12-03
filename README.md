@@ -1,7 +1,15 @@
-# Deployment
+# Preinstall
 
+## 1. Change host
 setup with [docker-compose.yml](docker-compose.yml) with command assume this deployment is in Host 10.237.96.122
 in this repo using host 10.237.96.122 as the host so you can change it to localhost (127.0.0.1) by running the command below to apply all project
+## 2. Initialize dependency
+
+- Java 1.18 with Maven
+- Docker
+
+
+# Deployment
 
 ```sh
 find . -type f \( -name "*.sql" -o -name "*.ipynb" \) -exec sed -i 's/10.237.96.122/127.0.0.1/g' {} +
@@ -93,4 +101,5 @@ Summary of the steps
 1. Download jars dependence
 2. Run sql client in local mode or hadoop mode
 3. Run sql statement
+    - [buy_cnt_per_second.sql](sql/buy_cnt_per_second.sql)
     - [top_category.sql](sql/top_category.sql)
