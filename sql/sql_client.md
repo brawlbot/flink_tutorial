@@ -71,7 +71,7 @@ Then the output will be:
 ![cli_user_behavior](../image/cli_user_behavior.png)
 
 
-Explain tolerate 5-seconds out-of-order, ts field becomes an event-time attribute
+Explain tolerate 1-seconds out-of-order, ts field becomes an event-time attribute
 
 # Sql
 ## Aggregate
@@ -89,9 +89,10 @@ EXPLAIN PLAN FOR SELECT role_id, count(*) from user_behavior group by role_id;
 EXPLAIN CHANGELOG_MODE FOR SELECT role_id, count(*) from user_behavior group by role_id;
 ```
 
+then, create table for kafka with topic `buy_cnt_per_second`
 
 ```sql
-DROP TABLE IF EXISTS buy_cnt_per_second;
+-- DROP TABLE IF EXISTS buy_cnt_per_second;
 
 CREATE TABLE buy_cnt_per_second (
     -- hour BIGINT,
@@ -112,7 +113,6 @@ WHERE behavior = 'buy'
 GROUP BY TUMBLE(ts, INTERVAL '1' SECOND);
 
 SELECT * FROM buy_cnt_per_second;
--- SELECT CAST('2024-11-25 01:28:00' AS TIMESTAMP);
 ```
 
 Query the data in kafka
@@ -123,6 +123,8 @@ Or in Kafka Control Center
 
 ![kafka_buy_cnt_per_second](../image/kafka_buy_cnt_per_second.png)
 
+
+For elastic search, refer to [buy_cnt_per_second.sql](buy_cnt_per_second.sql)
 
 ### Group by item
 ```sql
@@ -143,36 +145,6 @@ CREATE TABLE buy_cnt_per_item (
 );
 
 ```
-
-### elastic search
-
-Delete the index before creating the table
-```sh
-curl -X DELETE "http://10.237.96.122:9200/buy_cnt_per_second"
-```
-
-```sql
-DROP TABLE IF EXISTS buy_cnt_per_second_elk;
-
-CREATE TABLE buy_cnt_per_second_elk (
-    -- hour BIGINT,
-    second_of_minue BIGINT,
-    buy_cnt BIGINT
-) WITH (
-    'connector' = 'elasticsearch-7', -- using elasticsearch connector
-    'hosts' = '10.237.96.122:9200',  -- elasticsearch address
-    'index' = 'buy_cnt_per_second'  -- elasticsearch index name, similar to database table name
-);
-
-INSERT INTO buy_cnt_per_second_elk
-SELECT SECOND(TUMBLE_START(ts, INTERVAL '1' SECOND)), COUNT(*)
-FROM user_behavior
-WHERE behavior = 'buy'
-GROUP BY TUMBLE(ts, INTERVAL '1' SECOND);
-
--- INSERT INTO buy_cnt_per_second_elk VALUES (1, 2);
-```
-
 # Reference
 
 document of function sql be found in [systemfunctions](https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/dev/table/functions/systemfunctions/)
@@ -254,44 +226,4 @@ output in Kibana
 
 
 # Top category
-
-connect to mysql 10.237.96.122:3306
-
-```sql
-DROP TABLE IF EXISTS category_dim;
-
-CREATE TABLE category_dim (
-    sub_category_id STRING,
-    parent_category_name STRING
-) WITH (
-    'connector' = 'jdbc',
-    'url' = 'jdbc:mysql://10.237.96.122:3306/flink',
-    'table-name' = 'category',
-    'username' = 'root',
-    'password' = '123456',
-    'lookup.cache.max-rows' = '5000',
-    'lookup.cache.ttl' = '10s'
-);
-
-SELECT * FROM category_dim;
-```
-
-
-```sql
--- DROP TABLE IF EXISTS top_category;
-CREATE TABLE top_category (
-    category_name STRING PRIMARY KEY NOT ENFORCED,
-    buy_cnt BIGINT
-) WITH (
-    'connector' = 'elasticsearch-7',
-    'hosts' = '10.237.96.122:9200',
-    'index' = 'top_category'
-);
-```
-
-output in Kibana
-![kibana_top_category](../image/kibana_top_category.png)
-
-
-# Overview the dashboard
-![dashboard](../image/dashboard.png)
+refer to [top_category.sql](top_category.sql)

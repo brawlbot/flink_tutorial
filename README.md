@@ -1,11 +1,17 @@
 # Deployment
-setup with [docker-compose.yml](docker-compose.yml) with command
 
+setup with [docker-compose.yml](docker-compose.yml) with command assume this deployment is in Host 10.237.96.122
+in this repo using host 10.237.96.122 as the host so you can change it to localhost (127.0.0.1) by running the command below to apply all project
+
+```sh
+find . -type f \( -name "*.sql" -o -name "*.ipynb" \) -exec sed -i 's/10.237.96.122/127.0.0.1/g' {} +
+```
+
+then run the command below
 ```sh
 docker compose up -d
 ```
 then list of service
-
 |Service| URL | Description |
 |---|---|---|
 |Kafka| [http://10.237.96.122:9021/](http://10.237.96.122:9021/) | Kafka Control Center |
