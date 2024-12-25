@@ -5,9 +5,10 @@ In `pom.xml`, add dependencies for Elasticsearch and Kafka. For example, you can
     - [jdbc_pom.xml](../jars/jdbc_pom.xml)
 To install jars to local folder `jars`, run the following command:
 ```sh
-mvn dependency:copy-dependencies -DoutputDirectory=./elastic -f elastic_pom.xml
-mvn dependency:copy-dependencies -DoutputDirectory=./kafka -f kafka_pom.xml
-mvn dependency:copy-dependencies -DoutputDirectory=./jdbc -f jdbc_pom.xml
+mvn dependency:copy-dependencies -DoutputDirectory=${HOME}/jars/elastic -f ../jars/elastic_pom.xml
+mvn dependency:copy-dependencies -DoutputDirectory=${HOME}/jars/kafka -f ../jars/kafka_pom.xml
+mvn dependency:copy-dependencies -DoutputDirectory=${HOME}/jars/jdbc -f ../jars/jdbc_pom.xml
+
 ```
 ## Run sql in local mode (Option 1)
 In docker container, run the following command:
@@ -30,11 +31,14 @@ export HADOOP_CLASSPATH=`hadoop classpath`
 cd ${HOME}/flink-1.16.0
 
 ./bin/sql-client.sh \
-    -j ${HOME}/.m2/repository/org/apache/flink/flink-connector-kafka/1.16.0/flink-connector-kafka-1.16.0.jar \
-    -j ${HOME}/.m2/repository/org/apache/kafka/kafka-clients/3.2.3/kafka-clients-3.2.3.jar \
-    -l ${HOME}/jars/elasticsearch \
-    -l ${HOME}/jars/jdbc
+    -l ${HOME}/jars/elastic \
+    -l ${HOME}/jars/jdbc \
+    -j ${HOME}/jars/kafka/kafka-clients-3.2.3.jar \
+    -j ${HOME}/jars/kafka/flink-connector-kafka-1.16.0.jar
 
+    # -l ${HOME}/jars/kafka \
+    # -j ${HOME}/.m2/repository/org/apache/flink/flink-connector-kafka/1.16.0/flink-connector-kafka-1.16.0.jar \
+    # -j ${HOME}/.m2/repository/org/apache/kafka/kafka-clients/3.2.3/kafka-clients-3.2.3.jar \
 ```
 
 
