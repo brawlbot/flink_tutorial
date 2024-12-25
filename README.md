@@ -17,7 +17,7 @@ find . -type f \( -name "*.sql" -o -name "*.ipynb" -o -name "*.yml" -o -name "*.
 ## 3. Install mvn
 ```sh
 wget https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz
-tar -xvf apache-maven-3.9.9-bin.Dtar.gz
+tar -xvf apache-maven-3.9.9-bin.tar.gz
 mv apache-maven-3.9.9 /opt/
 M2_HOME='/opt/apache-maven-3.9.9'
 PATH="$M2_HOME/bin:$PATH"
