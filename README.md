@@ -3,17 +3,31 @@
 ## 1. Change host
 setup with [docker-compose.yml](docker-compose.yml) with command assume this deployment is in Host 10.237.96.122
 in this repo using host 10.237.96.122 as the host so you can change it to localhost (127.0.0.1) by running the command below to apply all project
+
+example:
+```sh
+git clone https://github.com/brawlbot/flink_tutorial && cd flink_tutorial
+find . -type f \( -name "*.sql" -o -name "*.ipynb" -o -name "*.yml" -o -name "*.java" \) -exec sed -i 's/10.237.96.122/10.237.96.145/g' {} +
+```
 ## 2. Initialize dependency
 
 - Java 1.18 with Maven
 - Docker
 
+## 3. Install mvn
+```sh
+wget https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz
+tar -xvf apache-maven-3.9.9-bin.Dtar.gz
+mv apache-maven-3.9.9 /opt/
+M2_HOME='/opt/apache-maven-3.9.9'
+PATH="$M2_HOME/bin:$PATH"
+export PATH
+```
+
 
 # Deployment
 
-```sh
-find . -type f \( -name "*.sql" -o -name "*.ipynb" \) -exec sed -i 's/10.237.96.122/127.0.0.1/g' {} +
-```
+
 
 then run the command below
 ```sh
